@@ -1,0 +1,16 @@
+.DS_Store
+/build
+/tags
+.idea
+.codelite
+.ycm_extra_conf.py
+.ycm_extra_conf.pyc
+Release
+Debug
+CMakeFiles
+*.a
+/version
+miniupnpcstrings.h
+compile_commands.json
+*.workspace
+*.project
