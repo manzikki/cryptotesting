@@ -54,6 +54,9 @@ namespace po = boost::program_options;
 #define EXTENDED_LOGS_FILE "wallet_details.log"
 #undef ERROR
 
+#define TAG_MAX_LEN 60
+#define TAG_FULL_LEN 64
+
 namespace {
 
 const command_line::arg_descriptor<std::string> arg_wallet_file = { "wallet-file", "Use wallet <arg>", "" };
@@ -61,6 +64,7 @@ const command_line::arg_descriptor<std::string> arg_generate_new_wallet = { "gen
 const command_line::arg_descriptor<std::string> arg_daemon_address = { "daemon-address", "Use daemon instance at <host>:<port>", "" };
 const command_line::arg_descriptor<std::string> arg_daemon_host = { "daemon-host", "Use daemon instance at host <arg> instead of localhost", "" };
 const command_line::arg_descriptor<std::string> arg_password = { "password", "Wallet password", "", true };
+const command_line::arg_descriptor<std::string> arg_nfc = { "nfc", "NFC code", "", true };
 const command_line::arg_descriptor<uint16_t> arg_daemon_port = { "daemon-port", "Use daemon instance at port <arg> instead of 8081", 0 };
 const command_line::arg_descriptor<uint32_t> arg_log_level = { "set_log", "", INFO, true };
 const command_line::arg_descriptor<bool> arg_testnet = { "testnet", "Used to deploy test nets. The daemon must be launched with --testnet flag", false };
@@ -741,14 +745,30 @@ bool simple_wallet::deinit() {
 
   return close_wallet();
 }
+
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::handle_command_line(const boost::program_options::variables_map& vm) {
+  std::string nfc_str;
+  nfc_str = command_line::get_arg(vm, arg_nfc);
+  if (!(nfc_str.empty())) { nfc_str = check_nfc(nfc_str); std::cout << "NFC:" << nfc_str << "\n"; }
   m_wallet_file_arg = command_line::get_arg(vm, arg_wallet_file);
   m_generate_new = command_line::get_arg(vm, arg_generate_new_wallet);
   m_daemon_address = command_line::get_arg(vm, arg_daemon_address);
   m_daemon_host = command_line::get_arg(vm, arg_daemon_host);
   m_daemon_port = command_line::get_arg(vm, arg_daemon_port);
 }
+
+//----------------------------------------------------------------------------------------------------
+//Check format of nfc parameter. If ok, return it trail-padded with X's up to 64 chars. Else return "".
+//Current coding of NFC tags: integer_prod_id=decimal_price. Tag content max len TAG_MAX_LEN chars.
+std::string simple_wallet::check_nfc(std::string nfc_arg)
+{
+    if(nfc_arg.length() > TAG_MAX_LEN) return "";
+    //TBD: format checking, now we only pad
+    for(int i=nfc_arg.length(); i<TAG_FULL_LEN; i++) nfc_arg = nfc_arg + "X";
+    return nfc_arg;
+} 
+
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::new_wallet(const std::string &wallet_file, const std::string& password) {
   m_wallet_file = wallet_file;
@@ -1243,6 +1263,7 @@ int main(int argc, char* argv[]) {
   command_line::add_arg(desc_params, arg_wallet_file);
   command_line::add_arg(desc_params, arg_generate_new_wallet);
   command_line::add_arg(desc_params, arg_password);
+  command_line::add_arg(desc_params, arg_nfc);
   command_line::add_arg(desc_params, arg_daemon_address);
   command_line::add_arg(desc_params, arg_daemon_host);
   command_line::add_arg(desc_params, arg_daemon_port);
@@ -1271,6 +1292,7 @@ int main(int argc, char* argv[]) {
       CryptoNote::simple_wallet tmp_wallet(dispatcher, tmp_currency, logManager);
 
       std::cout << CRYPTONOTE_NAME << " wallet v" << PROJECT_VERSION_LONG << std::endl;
+      std::cout << "(man: 0.01: command line options)" << std::endl;
       std::cout << "Usage: simplewallet [--wallet-file=<file>|--generate-new-wallet=<file>] [--daemon-address=<host>:<port>] [<COMMAND>]";
       std::cout << desc_all << '\n' << tmp_wallet.get_commands_str();
       return false;

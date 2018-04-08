@@ -68,6 +68,8 @@ namespace CryptoNote
     bool open_wallet(const std::string &wallet_file, const std::string& password);
     bool close_wallet();
 
+    std::string check_nfc(std::string nfc_arg); //man Apr 2018
+
     bool help(const std::vector<std::string> &args = std::vector<std::string>());
     bool exit(const std::vector<std::string> &args);
     bool start_mining(const std::vector<std::string> &args);
