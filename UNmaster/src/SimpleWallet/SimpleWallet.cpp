@@ -749,8 +749,15 @@ bool simple_wallet::deinit() {
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::handle_command_line(const boost::program_options::variables_map& vm) {
   std::string nfc_str;
+  std::string nfc_pid64;
+  std::string nfc_wallet;
+  std::string nfc_price;
   nfc_str = command_line::get_arg(vm, arg_nfc);
-  if (!(nfc_str.empty())) { nfc_str = check_nfc(nfc_str); std::cout << "NFC:" << nfc_str << "\n"; }
+  if (!(nfc_str.empty())) { 
+      nfc_pid64 = parse_nfc_pid(nfc_str); std::cout << "NFC pid:" << nfc_pid64 << "\n";
+      nfc_wallet = parse_nfc_wallet(nfc_str); std::cout << "NFC wallet:" << nfc_wallet << "\n";
+      nfc_price = parse_nfc_price(nfc_str); std::cout << "NFC price:" << nfc_price << "\n";
+  }
   m_wallet_file_arg = command_line::get_arg(vm, arg_wallet_file);
   m_generate_new = command_line::get_arg(vm, arg_generate_new_wallet);
   m_daemon_address = command_line::get_arg(vm, arg_daemon_address);
@@ -759,15 +766,92 @@ void simple_wallet::handle_command_line(const boost::program_options::variables_
 }
 
 //----------------------------------------------------------------------------------------------------
-//Check format of nfc parameter. If ok, return it trail-padded with X's up to 64 chars. Else return "".
-//Current coding of NFC tags: integer_prod_id=decimal_price. Tag content max len TAG_MAX_LEN chars.
-std::string simple_wallet::check_nfc(std::string nfc_arg)
+//Check format of nfc parameter. If ok, return prod_id trail-padded with X's up to 64 chars. Else return "".
+//Current coding of NFC tags: integer_prod_id=string_wallet_id=decimal_price.
+std::string simple_wallet::parse_nfc_pid(std::string nfc_arg)
 {
-    if(nfc_arg.length() > TAG_MAX_LEN) return "";
-    //TBD: format checking, now we only pad
-    for(int i=nfc_arg.length(); i<TAG_FULL_LEN; i++) nfc_arg = nfc_arg + "X";
-    return nfc_arg;
+    int eq_pos_1 = 0;
+    int eq_pos_2 = 0;
+    std::string pidstr = "";
+    //basic string checking
+    std::size_t found = nfc_arg.find("=");
+    if (found!=std::string::npos)
+    {
+        eq_pos_1 = found;
+        found = nfc_arg.find("=", found + 1); //note: the equal signs cannot be next to each other
+        if (found!=std::string::npos) eq_pos_2 = found;
+    }
+    if (nfc_arg[nfc_arg.length()-1] == '=') return ""; //=cannot be the last char
+    if (eq_pos_1 && eq_pos_2)
+    {
+        for (int i=0;i<eq_pos_1;i++)
+        {
+            if(isdigit(nfc_arg[i])) //has to be numeric
+            {
+                pidstr+=nfc_arg[i];
+            } else return "";
+        }
+    } else return "";
+    for(int i=pidstr.length(); i<TAG_FULL_LEN; i++) pidstr = pidstr + "X";
+    return pidstr;
 } 
+
+//----------------------------------------------------------------------------------------------------
+//Get the wallet part of coded nfc arg
+std::string simple_wallet::parse_nfc_wallet(std::string nfc_arg)
+{
+    int eq_pos_1 = 0;
+    int eq_pos_2 = 0;
+    std::string walletstr = "";
+    //basic string checking
+    std::size_t found = nfc_arg.find("=");
+    if (found!=std::string::npos)
+    {
+        eq_pos_1 = found;
+        found = nfc_arg.find("=", found + 1); //note: the equal signs cannot be next to each other
+        if (found!=std::string::npos) eq_pos_2 = found;
+    }
+    if (nfc_arg[nfc_arg.length()-1] == '=') return ""; //=cannot be the last char
+    if (eq_pos_1 && eq_pos_2)
+    {
+        for (int i=eq_pos_1+1;i<eq_pos_2;i++)
+        {
+            walletstr = walletstr + nfc_arg[i];
+        }
+    } else return "";
+    return walletstr;
+}
+
+//----------------------------------------------------------------------------------------------------
+//Get the price part of coded nfc arg
+std::string simple_wallet::parse_nfc_price(std::string nfc_arg)
+{
+    int eq_pos_1 = 0;
+    int eq_pos_2 = 0;
+    std::string pricestr = "";
+    //basic string checking
+    std::size_t found = nfc_arg.find("=");
+    if (found!=std::string::npos)
+    {
+        eq_pos_1 = found;
+        found = nfc_arg.find("=", found + 1); //note: the equal signs cannot be next to each other
+        if (found!=std::string::npos) eq_pos_2 = found;
+    }
+    if (nfc_arg[nfc_arg.length()-1] == '=') return ""; //=cannot be the last char
+    if (eq_pos_1 && eq_pos_2)
+    {
+        for (unsigned int i=eq_pos_2+1;i<nfc_arg.length();i++)
+        {
+            //check that it is numeric or '.'
+            if(isdigit(nfc_arg[i]) || (nfc_arg[i] == '.'))
+            {
+                pricestr = pricestr + nfc_arg[i];
+            } else return "";
+        }
+    } else return "";
+    return pricestr;
+}
+
 
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::new_wallet(const std::string &wallet_file, const std::string& password) {
