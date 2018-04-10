@@ -5,6 +5,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+//Minor changes by man Apr 2018: enable command line processing
+
 #include "SimpleWallet.h"
 
 #include <ctime>
@@ -752,13 +754,19 @@ void simple_wallet::handle_command_line(const boost::program_options::variables_
   std::string nfc_pid64;
   std::string nfc_wallet;
   std::string nfc_price;
+  std::string send_command;
+
   nfc_str = command_line::get_arg(vm, arg_nfc);
   if (!(nfc_str.empty())) { 
       nfc_pid64 = parse_nfc_pid(nfc_str); std::cout << "NFC pid:" << nfc_pid64 << "\n";
       nfc_wallet = parse_nfc_wallet(nfc_str); std::cout << "NFC wallet:" << nfc_wallet << "\n";
       nfc_price = parse_nfc_price(nfc_str); std::cout << "NFC price:" << nfc_price << "\n";
+      if (!nfc_wallet.empty() && !nfc_price.empty() && !nfc_pid64.empty())
+      {
+           send_command = "transfer 0 "+nfc_wallet+" "+nfc_price+" -p "+nfc_pid64;
+           std::cout << send_command << "\n";
+      }
   }
-  m_wallet_file_arg = command_line::get_arg(vm, arg_wallet_file);
   m_generate_new = command_line::get_arg(vm, arg_generate_new_wallet);
   m_daemon_address = command_line::get_arg(vm, arg_daemon_address);
   m_daemon_host = command_line::get_arg(vm, arg_daemon_host);
@@ -766,7 +774,7 @@ void simple_wallet::handle_command_line(const boost::program_options::variables_
 }
 
 //----------------------------------------------------------------------------------------------------
-//Check format of nfc parameter. If ok, return prod_id trail-padded with X's up to 64 chars. Else return "".
+//Check format of nfc parameter. If ok, return prod_id front-padded with 0's up to 64 chars. Else return "".
 //Current coding of NFC tags: integer_prod_id=string_wallet_id=decimal_price.
 std::string simple_wallet::parse_nfc_pid(std::string nfc_arg)
 {
@@ -792,7 +800,7 @@ std::string simple_wallet::parse_nfc_pid(std::string nfc_arg)
             } else return "";
         }
     } else return "";
-    for(int i=pidstr.length(); i<TAG_FULL_LEN; i++) pidstr = pidstr + "X";
+    for(int i=pidstr.length(); i<TAG_FULL_LEN; i++) pidstr = "0" + pidstr;
     return pidstr;
 } 
 
@@ -1209,6 +1217,9 @@ std::string simple_wallet::resolveAlias(const std::string& aliasUrl) {
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::transfer(const std::vector<std::string> &args) {
+  for(auto i : args) {
+      std::cout << "XX " + i + "\n";
+  }
   try {
     TransferCommand cmd(m_currency);
 
