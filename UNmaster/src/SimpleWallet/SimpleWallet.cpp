@@ -767,6 +767,7 @@ void simple_wallet::handle_command_line(const boost::program_options::variables_
            std::cout << send_command << "\n";
       }
   }
+  m_wallet_file_arg = command_line::get_arg(vm, arg_wallet_file);
   m_generate_new = command_line::get_arg(vm, arg_generate_new_wallet);
   m_daemon_address = command_line::get_arg(vm, arg_daemon_address);
   m_daemon_host = command_line::get_arg(vm, arg_daemon_host);
@@ -1514,7 +1515,10 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::string> command = command_line::get_arg(vm, arg_command);
     if (!command.empty())
-      wal.process_command(command);
+    {
+        std::cout << "YY\n";
+        wal.process_command(command);
+    }
 
     Tools::SignalHandler::install([&wal] {
       wal.stop();
