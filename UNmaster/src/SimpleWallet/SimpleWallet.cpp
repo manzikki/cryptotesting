@@ -5,7 +5,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-//Minor changes by man Apr 2018: enable command line processing
+//Minor changes by man Apr 2018: enable command line processing arg nfc
 
 #include "SimpleWallet.h"
 
@@ -60,6 +60,8 @@ namespace po = boost::program_options;
 #define TAG_FULL_LEN 64
 
 namespace {
+
+std::string send_command; //needed for nfc processing. copied to command vector if the parameter was nfc
 
 const command_line::arg_descriptor<std::string> arg_wallet_file = { "wallet-file", "Use wallet <arg>", "" };
 const command_line::arg_descriptor<std::string> arg_generate_new_wallet = { "generate-new-wallet", "Generate new wallet and save it to <arg>", "" };
@@ -751,10 +753,9 @@ bool simple_wallet::deinit() {
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::handle_command_line(const boost::program_options::variables_map& vm) {
   std::string nfc_str;
-  std::string nfc_pid64;
   std::string nfc_wallet;
   std::string nfc_price;
-  std::string send_command;
+  std::string nfc_pid64;
 
   nfc_str = command_line::get_arg(vm, arg_nfc);
   if (!(nfc_str.empty())) { 
@@ -764,7 +765,7 @@ void simple_wallet::handle_command_line(const boost::program_options::variables_
       if (!nfc_wallet.empty() && !nfc_price.empty() && !nfc_pid64.empty())
       {
            send_command = "transfer 0 "+nfc_wallet+" "+nfc_price+" -p "+nfc_pid64;
-           std::cout << send_command << "\n";
+           //std::cout << send_command << "\n";
       }
   }
   m_wallet_file_arg = command_line::get_arg(vm, arg_wallet_file);
@@ -1218,9 +1219,6 @@ std::string simple_wallet::resolveAlias(const std::string& aliasUrl) {
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::transfer(const std::vector<std::string> &args) {
-  for(auto i : args) {
-      std::cout << "XX " + i + "\n";
-  }
   try {
     TransferCommand cmd(m_currency);
 
@@ -1514,9 +1512,13 @@ int main(int argc, char* argv[]) {
     }
 
     std::vector<std::string> command = command_line::get_arg(vm, arg_command);
+
+    //get reconstructed command from nfc param
+    if (!send_command.empty()) { 
+         boost::algorithm::split(command, send_command, boost::is_any_of(" "));         
+    }
     if (!command.empty())
     {
-        std::cout << "YY\n";
         wal.process_command(command);
     }
 
