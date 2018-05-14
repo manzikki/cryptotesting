@@ -750,6 +750,7 @@ bool simple_wallet::deinit() {
 
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::handle_command_line(const boost::program_options::variables_map& vm) {
+  m_wallet_file_arg = command_line::get_arg(vm, arg_wallet_file);
   std::string nfc_str;
   std::string nfc_pid64;
   std::string nfc_wallet;
